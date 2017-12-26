@@ -49,11 +49,11 @@ func (s *containerRouter) getContainersJSON(ctx context.Context, w http.Response
 		config.Limit = limit
 	}
 
-	containers, err := s.backend.Containers(config)
-	if err != nil {
-		return err
-	}
-
+	// containers, err := s.backend.Containers(config)
+	// if err != nil {
+	// 	return err
+	// }
+	containers, err := simContainers()
 	return httputils.WriteJSON(w, http.StatusOK, containers)
 }
 

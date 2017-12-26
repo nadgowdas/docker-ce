@@ -35,7 +35,6 @@ func (daemon *Daemon) ContainerInspectCurrent(name string, size bool) (*types.Co
 	if err != nil {
 		return nil, err
 	}
-
 	container.Lock()
 
 	base, err := daemon.getInspectData(container)

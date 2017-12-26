@@ -19,9 +19,10 @@ func (s *containerRouter) getContainersByName(ctx context.Context, w http.Respon
 	// if err != nil {
 	// 	return err
 	// }
-	str, _ := simContainerInpsect()
+
+	inspectData, _ := simContainerInpsect(vars["name"])
 	var contType = &types.ContainerJSON{}
-	json.Unmarshal([]byte(str), &contType)
+	json.Unmarshal(inspectData, &contType)
 	// var contList = make([]types.ContainerJSON, 1)
 	// contList = append(contList, contType)
 	// out, _ := json.Marshal(contType)

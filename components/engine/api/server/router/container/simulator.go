@@ -1,86 +1,91 @@
 package container
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"strings"
+	"time"
 
 	"github.com/docker/docker/api/types"
 )
 
-// Port An open port on a container
-// swagger:model Port
-type Port struct {
+var inspectRepo = "/var/lib/simdocker/"
 
-	// IP
-	IP string `json:"IP,omitempty"`
+func simContainerPs() ([]*types.Container, error) {
+	containers, err := ioutil.ReadDir(inspectRepo)
+	if err != nil {
+		return nil, err
+	}
+	var contList = make([]*types.Container, len(containers))
+	var idx = 0
+	for _, cont := range containers {
+		var pathBuffer bytes.Buffer
+		pathBuffer.WriteString(inspectRepo)
+		pathBuffer.WriteString(cont.Name())
+		inspectData, _ := simReadInpsect(pathBuffer.String())
+		var contJson = types.ContainerJSON{}
+		json.Unmarshal(inspectData, &contJson)
 
-	// Port on the container
-	// Required: true
-	PrivatePort uint16 `json:"PrivatePort"`
-
-	// Port exposed on the host
-	PublicPort uint16 `json:"PublicPort,omitempty"`
-
-	// type
-	// Required: true
-	Type string `json:"Type"`
-}
-
-// MountPoint represents a mount point configuration inside the container.
-// This is used for reporting the mountpoints in use by a container.
-// type MountPoint struct {
-// 	Type        mount.Type `json:",omitempty"`
-// 	Name        string     `json:",omitempty"`
-// 	Source      string
-// 	Destination string
-// 	Driver      string `json:",omitempty"`
-// 	Mode        string
-// 	RW          bool
-// 	Propagation mount.Propagation
-// }
-
-// Container contains response of Engine API:
-// GET "/containers/json"
-type Container struct {
-	ID         string `json:"Id"`
-	Names      []string
-	Image      string
-	ImageID    string
-	Command    string
-	Created    int64
-	Ports      []Port
-	SizeRw     int64 `json:",omitempty"`
-	SizeRootFs int64 `json:",omitempty"`
-	Labels     map[string]string
-	State      string
-	Status     string
-	// HostConfig struct {
-	// 	NetworkMode string `json:",omitempty"`
-	// }
-	//NetworkSettings *SummaryNetworkSettings
-	// Mounts          []MountPoint
-}
-
-func simContainers() ([]*types.Container, error) {
-	var cont types.Container
-	cont.ID = "12345"
-	cont.Names = []string{"confuse-cont"}
-	cont.Image = "myimage"
-	cont.ImageID = "myimage-id"
-	cont.Command = "command"
-	cont.Created = 1513629086
-	cont.State = "Running"
-	cont.Status = "Up 47 hours"
-	var contList = make([]*types.Container, 1)
-	contList[0] = &cont
+		var contType types.Container
+		contType.ID = contJson.ID
+		contType.Names = []string{contJson.Name}
+		contType.Image = contJson.Config.Image
+		contType.Status = contJson.State.Status
+		var command bytes.Buffer
+		command.WriteString(contJson.Path)
+		command.WriteString(" ")
+		args := contJson.Args
+		for _, arg := range args {
+			command.WriteString(arg)
+			command.WriteString(" ")
+		}
+		// var tmpPorts []types.Port
+		contType.Command = command.String()
+		cTime, _ := time.Parse(time.RFC3339Nano, contJson.Created)
+		contType.Created = cTime.Unix()
+		// contList = append(contList, &contType)
+		contList[idx] = &contType
+		idx++
+	}
 	return contList, nil
+	// var cont types.Container
+	// cont.ID = "12345"
+	// cont.Names = []string{"confuse-cont"}
+	// cont.Image = "myimage"
+	// cont.ImageID = "myimage-id"
+	// cont.Command = "command"
+	// cont.Created = 1513629086
+	// cont.State = "Running"
+	// cont.Status = "Up 47 hours"
+
+	// contList[0] = &cont
+
 }
 
-func simContainerInpsect() (string, error) {
-	inspectStr, err := ioutil.ReadFile("/tmp/cont.inspect") // just pass the file name
+func simContainerInpsect(name string) ([]byte, error) {
+	containers, err := ioutil.ReadDir(inspectRepo)
+	if err != nil {
+		return nil, err
+	}
+	for _, contFile := range containers {
+		if strings.Compare(contFile.Name(), name) == 0 {
+			var pathBuffer bytes.Buffer
+			pathBuffer.WriteString(inspectRepo)
+			pathBuffer.WriteString(contFile.Name())
+			inspectData, _ := simReadInpsect(pathBuffer.String())
+			return inspectData, nil
+		}
+	}
+	return nil, nil
+}
+
+func simReadInpsect(filepath string) ([]byte, error) {
+	inspectData, err := ioutil.ReadFile(filepath) // just pass the file name
 	if err != nil {
 		fmt.Print(err)
 	}
 
-	return string(inspectStr), nil
+	return inspectData, nil
 }

@@ -53,7 +53,7 @@ func (s *containerRouter) getContainersJSON(ctx context.Context, w http.Response
 	// if err != nil {
 	// 	return err
 	// }
-	containers, err := simContainers()
+	containers, err := simContainerPs()
 	return httputils.WriteJSON(w, http.StatusOK, containers)
 }
 

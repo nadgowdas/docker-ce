@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"strconv"
 	"strings"
 	"time"
 
@@ -42,6 +43,28 @@ func simContainerPs() ([]*types.Container, error) {
 			command.WriteString(" ")
 		}
 		// var tmpPorts []types.Port
+		portmap := contJson.NetworkSettings.Ports
+		var portList = make([]types.Port, len(portmap))
+		var idx2 = 0
+		for k, v := range portmap {
+			var curPort types.Port
+			var portProto bytes.Buffer
+			portProto.WriteString(k.Port())
+			portProto.WriteString("/")
+			portProto.WriteString(k.Proto())
+			curPort.Type = k.Proto()
+			portProto.Truncate(0)
+			priPort, _ := strconv.ParseUint(k.Port(), 10, 16)
+			curPort.PrivatePort = uint16(priPort)
+			for _, item := range v {
+				curPort.IP = item.HostIP
+				i64, _ := strconv.ParseUint(item.HostPort, 10, 16)
+				curPort.PublicPort = uint16(i64)
+			}
+			portList[idx2] = curPort
+			idx2++
+		}
+		contType.Ports = portList
 		contType.Command = command.String()
 		cTime, _ := time.Parse(time.RFC3339Nano, contJson.Created)
 		contType.Created = cTime.Unix()
